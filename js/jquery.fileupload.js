@@ -1173,10 +1173,10 @@
                 $.map(entries, function (entry) {
                     return that._handleFileTreeEntry(entry, path);
                 })
-            ).then(function () {
+            ).then(function (entries) {
                 return Array.prototype.concat.apply(
                     [],
-                    arguments
+                    entries
                 );
             });
         },
@@ -1208,16 +1208,9 @@
 
         _getSingleFileInputFiles: function (fileInput) {
             fileInput = $(fileInput);
-            var entries = fileInput.prop('webkitEntries') ||
-                    fileInput.prop('entries'),
-                files,
-                value;
-            if (entries && entries.length) {
-                return this._handleFileTreeEntries(entries);
-            }
-            files = $.makeArray(fileInput.prop('files'));
+            var files = $.makeArray(fileInput.prop('files'));
             if (!files.length) {
-                value = fileInput.prop('value');
+                var value = fileInput.prop('value');
                 if (!value) {
                     return $.Deferred().resolve([]).promise();
                 }
@@ -1242,10 +1235,10 @@
             return $.when.apply(
                 $,
                 $.map(fileInput, this._getSingleFileInputFiles)
-            ).then(function () {
+            ).then(function (files) {
                 return Array.prototype.concat.apply(
                     [],
-                    arguments
+                    files
                 );
             });
         },
@@ -1257,7 +1250,7 @@
                     form: $(e.target.form)
                 };
             this._getFileInputFiles(data.fileInput).always(function (files) {
-                data.files = files;
+                data.files = $.makeArray(files);
                 if (that.options.replaceFileInput) {
                     that._replaceFileInput(data);
                 }
