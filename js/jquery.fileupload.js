@@ -993,20 +993,15 @@
         slot,
         pipe,
         options = that._getAJAXSettings(data),
-        send = function() {
+        send = function(evntResult) {
           that._sending += 1;
           // Set timer for bitrate progress calculation:
           options._bitrateTimer = new that._BitrateTimer();
           jqXHR =
             jqXHR ||
             (
-              ((aborted ||
-                that._trigger(
-                  'send',
-                  $.Event('send', { delegatedEvent: e }),
-                  options
-                ) === false) &&
-                that._getXHRPromise(false, options.context, aborted)) ||
+              ((aborted || evntResult === false) &&
+              that._getXHRPromise(false, options.context, aborted)) ||
               that._chunkedUpload(options) ||
               $.ajax(options)
             )
@@ -1049,8 +1044,10 @@
               });
           return jqXHR;
         };
-        // new promise-based send
-        var _send = function () {
+        //
+        // new promise-based send proxy
+        //
+        var $$send = function () {
             if (that._trigger('send', $.Event('send', { delegatedEvent: e }), options)) {
                 if (options.$$promise) {
                     options.$$promise
@@ -1076,9 +1073,9 @@
         if (this.options.limitConcurrentUploads > 1) {
           slot = $.Deferred();
           this._slots.push(slot);
-          pipe = slot.then(_send);
+          pipe = slot.then($$send);
         } else {
-          this._sequence = this._sequence.then(_send, _send);
+          this._sequence = this._sequence.then($$send, $$send);
           pipe = this._sequence;
         }
         // Return the piped Promise object, enhanced with an abort method,
@@ -1090,13 +1087,13 @@
             if (slot) {
               slot.rejectWith(options.context, aborted);
             }
-            return _send();
+            return $$send();
           }
           return jqXHR.abort();
         };
         return this._enhancePromise(pipe);
       }
-      return _send();
+      return $$send();
     },
 
     _onAdd: function(e, data) {
