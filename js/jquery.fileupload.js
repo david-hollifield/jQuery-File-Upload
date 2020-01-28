@@ -1049,6 +1049,24 @@
               });
           return jqXHR;
         };
+        // new promise-based send
+        var _send = function () {
+            if (that._trigger('send', $.Event('send', { delegatedEvent: e }), options)) {
+                if (options.$$promise) {
+                    options.$$promise
+                        .then(function () {
+                            return send(true);
+                        })
+                        .catch(function () {
+                            return send(false);
+                        })
+                } else {
+                    return send(true);
+                }
+            } else {
+                return send(false);
+            }
+        };
       this._beforeSend(e, options);
       if (
         this.options.sequentialUploads ||
@@ -1058,9 +1076,9 @@
         if (this.options.limitConcurrentUploads > 1) {
           slot = $.Deferred();
           this._slots.push(slot);
-          pipe = slot.then(send);
+          pipe = slot.then(_send);
         } else {
-          this._sequence = this._sequence.then(send, send);
+          this._sequence = this._sequence.then(_send, _send);
           pipe = this._sequence;
         }
         // Return the piped Promise object, enhanced with an abort method,
@@ -1072,13 +1090,13 @@
             if (slot) {
               slot.rejectWith(options.context, aborted);
             }
-            return send();
+            return _send();
           }
           return jqXHR.abort();
         };
         return this._enhancePromise(pipe);
       }
-      return send();
+      return _send();
     },
 
     _onAdd: function(e, data) {
@@ -1336,8 +1354,8 @@
       }
       return $.when
         .apply($, $.map(fileInput, this._getSingleFileInputFiles))
-        .then(function() {
-          return Array.prototype.concat.apply([], arguments);
+        .then(function(files) {
+          return Array.prototype.concat.apply([], files);
         });
     },
 
@@ -1348,7 +1366,7 @@
           form: $(e.target.form)
         };
       this._getFileInputFiles(data.fileInput).always(function(files) {
-        data.files = files;
+        data.files = $.makeArray(files);
         if (that.options.replaceFileInput) {
           that._replaceFileInput(data);
         }
